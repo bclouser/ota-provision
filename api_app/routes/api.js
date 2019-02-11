@@ -119,7 +119,7 @@ router.get('/device-provision/device/:hardwareId/pkey.pem', function(req, res, n
 
 // We need a place for our mysql scripts to come from. So we just make an enpoint for them here
 router.get('/ota-demo-provision/mysql/:scriptName', function(req, res, next) {
-    res.sendFile('/workspace/kubernetes-ota-dev/ota-community-edition/scripts/sql/'+req.params.scriptName)
+    res.sendFile('/workspace/kubernetes/ota-community-edition/scripts/sql/'+req.params.scriptName)
 });
 
 

@@ -4,8 +4,8 @@ RUN apt-get -y update && apt-get -y install unzip openssl curl jq vim httpie zip
 
 WORKDIR /workspace
 
-ADD kubernetes ./
-ADD api_app ./
+COPY kubernetes ./kubernetes/
+COPY api_app ./api_app/
 
 WORKDIR /workspace/api_app
 
