@@ -4,17 +4,8 @@ RUN apt-get -y update && apt-get -y install unzip openssl curl jq vim httpie zip
 
 WORKDIR /workspace
 
-COPY kubernetes ./kubernetes/
-COPY api_app ./api_app/
+COPY ota-utils ./ota-utils
 
-WORKDIR /workspace/api_app
-
-RUN npm install
-
-EXPOSE 3000
-ENV DEBUG="api-app"
-ENTRYPOINT [ "npm", "start" ]
-
-
+WORKDIR /workspace/ota-utils
 
 

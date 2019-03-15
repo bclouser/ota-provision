@@ -1,0 +1,59 @@
+# config/local.yaml
+#
+# I prefer to not use Ingress controllers in GKE for a few reasons:
+# 1) They are still in beta.
+# 2) They cost a little more than just doing a Service of type "loadBalancer".
+# 3) When you deploy this securely, you'll need your own nginx reverse-proxy
+#    that can handle authentication/authorization.
+create_ingress: false
+
+# In which namespace do you want to create the ota infrastructure and services
+kube_namespace: default
+
+#NFS server and NFS mount details:
+nfs_server: 10.12.254.41
+nfs_mount: /vol_kubenfs6/ota-demo
+
+# We aren't using an Ingress, but templates/services/app.tmpl.yaml still
+# uses this for building up the DNS names of the services it uses. This
+# field must be set to the domain you host your service under. eg:
+# ingress_dns_name: foundriez.io
+ingress_dns_name: toradex.int
+
+# Use the 0.4 ota-tuf containers. They don't require "vault" which makes
+# deployment and management of the cluster dramatically easier.
+tuf_keyserver_daemon_docker_image: advancedtelematic/tuf-keyserver:0.4.0-46-g0298f0a
+tuf_keyserver_docker_image: advancedtelematic/tuf-keyserver:0.4.0-46-g0298f0a
+tuf_reposerver_docker_image: advancedtelematic/tuf-reposerver:0.4.0-46-g0298f0a
+
+# The default constraints used by OTA CE aren't really sufficient for a
+# usable cluster. These are somewhat arbitrary values that we've found work:
+device_registry_java_opts: "-Xmx450m"
+device_registry_mem: 500Mi
+
+director_daemon_java_opts: "-Xmx450m"
+director_daemon_mem: 500Mi
+
+director_java_opts: "-Xmx700m"
+director_mem: 750Mi
+
+kafka_mem: 750Mi
+kafka_disk: 20Gi
+
+mysql_disk: 20Gi
+
+treehub_java_opts: "-Xmx1750m"
+treehub_mem: 2Gi
+treehub_disk: 20Gi
+
+tuf_keyserver_daemon_java_opts: "-Xmx450m"
+tuf_keyserver_daemon_mem: 500Mi
+
+tuf_keyserver_java_opts: "-Xmx700m"
+tuf_keyserver_mem: 750Mi
+
+tuf_reposerver_java_opts: "-Xmx700m"
+tuf_reposerver_mem: 750Mi
+
+zookeeper_mem: 500Mi
+zookeeper_disk: 20Gi
