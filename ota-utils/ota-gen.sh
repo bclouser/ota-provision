@@ -20,7 +20,7 @@ KUBE_AUTH=Authorization:"Bearer ${KUBE_API_TOKEN}"
 echo "KUBE_API_URL=${KUBE_API_URL}"
 echo "KUBE_AUTH=${KUBE_AUTH}"
 
-
+# TODO. Determine if we are getting rid of this or not
 new_client() {
   export DEVICE_UUID=${DEVICE_UUID:-$(uuidgen | tr "[:upper:]" "[:lower:]")}
   local device_id=${DEVICE_ID:-${DEVICE_UUID}}
@@ -68,6 +68,65 @@ new_client() {
   scp -P "${port}" ${options} "${device_dir}/pkey.pem" "root@${addr}:/var/sota/pkey.pem"
 }
 
+setup_credentials() {
+  local api="${KUBE_API_URL}/${NAMESPACE}/services"
+  local keyserver="${api}/tuf-keyserver/proxy"
+  local reposerver="${api}/tuf-reposerver/proxy"
+  local director="${api}/director/proxy"
+  local id
+  local keys
+
+  http --ignore-stdin --check-status --verify=no GET ${KUBE_API_URL}/default/secrets/user-keys \
+  "${namespace_string}" "${KUBE_AUTH}" &> /dev/null && {
+    echo ""
+    echo "=== User Keys already exist. Skipping creation of user keys"
+    return 0
+  }
+  echo ""
+  echo " === Creating user keys"
+  
+  # Create entry for specified namespace
+  id=$(http --ignore-stdin --verify=no --check-status --print=b POST "${reposerver}/api/v1/user_repo" "${namespace_string}" "${KUBE_AUTH}"  | jq --raw-output .)
+  echo "Got id = $id"
+  http --ignore-stdin --check-status --verify="no" POST "${director}/api/v1/admin/repo" "${namespace_string}" "${KUBE_AUTH}"
+  
+  # TODO: Investigate why this isn't instantly available? Is it because it takes time to generate keys? Or is the pod just not ready?
+  # Also, *** WEIRD *** we have to send a get request to this URL before we can GET the keys: "<id>/keys/targets/pairs"
+  # otherwise a 404 is returned
+  i=0
+  while ! http --ignore-stdin --check-status --verify="no" GET "${keyserver}/api/v1/root/${id}" "${KUBE_AUTH}"
+  do
+    echo "Waiting for keys"
+    i=$((i+1))
+    if [ $i -gt 10 ];then
+      echo "Failed to get keys"
+      exit -1
+    fi
+    sleep 2
+  done
+  keys=$(http --ignore-stdin --check-status --verify="no" GET "${keyserver}/api/v1/root/${id}/keys/targets/pairs" "${KUBE_AUTH}")
+  echo "Ok, got keys:"
+  echo $keys
+  cat > user-keys.json << EOF
+  {
+  "kind": "Secret",
+  "apiVersion": "v1",
+  "metadata":{
+  "name": "user-keys",
+  "namespace": "default"
+  },
+  "type": "Opaque",
+  "data": {
+  "id": "$(echo -n ${id} | base64 -w 0)",
+  "keys": "$( echo -n ${keys} | base64 -w 0)"
+  }
+  }
+EOF
+  echo "==== Creating user-keys secret"
+  http --ignore-stdin --check-status --verify=no POST ${KUBE_API_URL}/default/secrets "${KUBE_AUTH}" \
+  @user-keys.json | jq '.status' 
+}
+
 new_server() {
   http --ignore-stdin --check-status --verify=no GET ${KUBE_API_URL}/default/secrets/gateway-tls \
   "${namespace_string}" "${KUBE_AUTH}" &> /dev/null && {
@@ -95,7 +154,6 @@ new_server() {
   openssl req -new -x509 -days 3650 -key "${DEVICES_DIR}/ca.key" -config "${CWD}/certs/device_ca.cnf" \
     -out "${DEVICES_DIR}/ca.crt"
   # end::genserverkeys[]
-
 
   cat > gateway-tls-secret.json << EOF
   {
@@ -156,8 +214,8 @@ case "${command}" in
   "new_server")
     new_server
     ;;
-  "new_client")
-    new_client
+  "setup_credentials")
+    setup_credentials
     ;;
   *)
     echo "Unknown command: ${command}"
