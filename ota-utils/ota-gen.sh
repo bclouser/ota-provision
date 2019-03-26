@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# TODO: Script should become a golang executable
+# TODO: Environment should come in from kubernetes configmap
+
 set -euo pipefail
 
 readonly KUBECTL=${KUBECTL:-kubectl}
@@ -167,7 +170,8 @@ new_server() {
   "data": {
   "server.key": "$(cat ${SERVER_DIR}/server.key | base64 -w 0)",
   "server.chain.pem": "$(cat ${SERVER_DIR}/server.chain.pem | base64 -w 0)",
-  "ca.crt": "$(cat ${SERVER_DIR}/devices/ca.crt | base64 -w 0)"
+  "ca.crt": "$(cat ${SERVER_DIR}/devices/ca.crt | base64 -w 0)",
+  "server_ca.pem": "$(cat ${SERVER_DIR}/server_ca.pem | base64 -w 0)"
   }
   }
 EOF
