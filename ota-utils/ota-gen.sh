@@ -5,11 +5,13 @@
 
 set -euo pipefail
 
-readonly KUBECTL=${KUBECTL:-kubectl}
-readonly CWD=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
-readonly DNS_NAME=${DNS_NAME:-ota.local}
+if [ -z ${DATA_PATH+x} ];then
+  echo "ERROR:  DATA_PATH is not set! This must be set in order to run this script"
+  exit -1
+fi
+export   DNS_NAME=${DNS_NAME:-ota.local}
 export   SERVER_NAME=${SERVER_NAME:-ota.ce}
-readonly SERVER_DIR=${SERVER_DIR:-${CWD}/../generated/${SERVER_NAME}}
+readonly SERVER_DIR=${SERVER_DIR:${DATA_PATH}/generated/${SERVER_NAME}}
 readonly DEVICES_DIR=${DEVICES_DIR:-${SERVER_DIR}/devices}
 readonly NAMESPACE=${NAMESPACE:-default}
 readonly KUBE_API_TOKEN_FILE=/var/run/secrets/kubernetes.io/serviceaccount/token

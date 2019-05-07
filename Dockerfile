@@ -8,4 +8,4 @@ COPY ota-utils ./ota-utils
 
 WORKDIR /workspace/ota-utils
 
-
+ENV DATA_PATH=/workspace/data
