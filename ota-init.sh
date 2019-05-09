@@ -1,7 +1,7 @@
 #!/bin/bash
 
-# TODO: Script should become a golang executable
-# TODO: Environment should come in from kubernetes configmap
+# TODO: Script should become part of otaprov golang executable
+# This script is really just trash.
 
 set -euo pipefail
 
@@ -9,9 +9,10 @@ if [ -z ${DATA_PATH+x} ];then
   echo "ERROR:  DATA_PATH is not set! This must be set in order to run this script"
   exit -1
 fi
+export   CERTS_DIR=${DATA_PATH}/certs
 export   DNS_NAME=${DNS_NAME:-ota.local}
 export   SERVER_NAME=${SERVER_NAME:-ota.ce}
-readonly SERVER_DIR=${SERVER_DIR:${DATA_PATH}/generated/${SERVER_NAME}}
+readonly SERVER_DIR=${SERVER_DIR:-${DATA_PATH}/generated/${SERVER_NAME}}
 readonly DEVICES_DIR=${DEVICES_DIR:-${SERVER_DIR}/devices}
 readonly NAMESPACE=${NAMESPACE:-default}
 readonly KUBE_API_TOKEN_FILE=/var/run/secrets/kubernetes.io/serviceaccount/token
@@ -98,17 +99,17 @@ new_server() {
 
   # This is a tag for including a chunk of code in the docs. Don't remove. tag::genserverkeys[]
   openssl ecparam -genkey -name prime256v1 | openssl ec -out "${SERVER_DIR}/ca.key"
-  openssl req -new -x509 -days 3650 -config "${CWD}/certs/server_ca.cnf" -key "${SERVER_DIR}/ca.key" \
+  openssl req -new -x509 -days 3650 -config "${CERTS_DIR}/server_ca.cnf" -key "${SERVER_DIR}/ca.key" \
     -out "${SERVER_DIR}/server_ca.pem"
 
   openssl ecparam -genkey -name prime256v1 | openssl ec -out "${SERVER_DIR}/server.key"
-  openssl req -new -config "${CWD}/certs/server.cnf" -key "${SERVER_DIR}/server.key" -out "${SERVER_DIR}/server.csr"
-  openssl x509 -req -days 3650 -extfile "${CWD}/certs/server.ext" -in "${SERVER_DIR}/server.csr" -CAcreateserial \
+  openssl req -new -config "${CERTS_DIR}/server.cnf" -key "${SERVER_DIR}/server.key" -out "${SERVER_DIR}/server.csr"
+  openssl x509 -req -days 3650 -extfile "${CERTS_DIR}/server.ext" -in "${SERVER_DIR}/server.csr" -CAcreateserial \
     -CAkey "${SERVER_DIR}/ca.key" -CA "${SERVER_DIR}/server_ca.pem" -out "${SERVER_DIR}/server.crt"
   cat "${SERVER_DIR}/server.crt" "${SERVER_DIR}/server_ca.pem" > "${SERVER_DIR}/server.chain.pem"
 
   openssl ecparam -genkey -name prime256v1 | openssl ec -out "${DEVICES_DIR}/ca.key"
-  openssl req -new -x509 -days 3650 -key "${DEVICES_DIR}/ca.key" -config "${CWD}/certs/device_ca.cnf" \
+  openssl req -new -x509 -days 3650 -key "${DEVICES_DIR}/ca.key" -config "${CERTS_DIR}/device_ca.cnf" \
     -out "${DEVICES_DIR}/ca.crt"
   # end::genserverkeys[]
 

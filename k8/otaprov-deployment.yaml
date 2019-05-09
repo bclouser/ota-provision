@@ -1,0 +1,28 @@
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: ota-provision
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: ota-prov
+    spec:
+      containers:
+        - name: ota-provision
+          image: bclouser/otaprov
+          command: ["/usr/local/bin/otaprov"]
+          ports:
+            - name: http-port
+              containerPort: 8000
+          tty: true
+          stdin: true
+          env:
+            - name: DNS_NAME
+              value: toradex.int
+            - name: SERVER_NAME
+              value: ota-ce.toradex.int
+            - name: AUTOPROV_SERVER_NAME
+              value: autoprov.dev2.inno
+      dnsPolicy: "ClusterFirst"
