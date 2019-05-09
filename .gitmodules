@@ -1,3 +1,0 @@
-[submodule "kubernetes"]
-	path = kubernetes
-	url = ssh://git@gitlab.toradex.int:8022/rd/devops/infrastructure/kubernetes.git
