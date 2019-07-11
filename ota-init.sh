@@ -4,6 +4,7 @@
 # This script is really just trash.
 
 set -euo pipefail
+set -x
 
 if [ -z ${DATA_PATH+x} ];then
   echo "ERROR:  DATA_PATH is not set! This must be set in order to run this script"
@@ -28,12 +29,20 @@ echo "KUBE_AUTH=${KUBE_AUTH}"
 
 setup_credentials() {
   local api="${KUBE_API_URL}/${NAMESPACE}/services"
-  local keyserver="${api}/tuf-keyserver/proxy"
-  local reposerver="${api}/tuf-reposerver/proxy"
-  local director="${api}/director/proxy"
+  local keyserver="${api}/${KEYSERVER_ENDPOINT}/proxy"
+  local reposerver="${api}/${REPOSERVER_ENDPOINT}/proxy"
+  local director="${api}/${DIRECTOR_ENDPOINT}/proxy"
   local id
   local keys
 
+  # Ben says overwrite these to use the regular service endpoints
+  local keyserver="${KEYSERVER_ENDPOINT}"
+  local reposerver="${REPOSERVER_ENDPOINT}"
+  local director="${DIRECTOR_ENDPOINT}"
+
+  echo "Value of keyserver: ${keyserver}"
+  echo "Value of reposerver: ${reposerver}"
+  echo "Value of director: ${director}"
   http --ignore-stdin --check-status --verify=no GET ${KUBE_API_URL}/default/secrets/user-keys \
   "${namespace_string}" "${KUBE_AUTH}" &> /dev/null && {
     echo ""
@@ -42,17 +51,17 @@ setup_credentials() {
   }
   echo ""
   echo " === Creating user keys"
-  
+
   # Create entry for specified namespace
-  id=$(http --ignore-stdin --verify=no --check-status --print=b POST "${reposerver}/api/v1/user_repo" "${namespace_string}" "${KUBE_AUTH}"  | jq --raw-output .)
+  id=$(http --ignore-stdin --verify=no --check-status --print=b POST "${reposerver}/api/v1/user_repo" "${namespace_string}" | jq --raw-output .)
   echo "Got id = $id"
-  http --ignore-stdin --check-status --verify="no" POST "${director}/api/v1/admin/repo" "${namespace_string}" "${KUBE_AUTH}"
+  http --ignore-stdin --check-status --verify="no" POST "${director}/api/v1/admin/repo" "${namespace_string}"
   
   # TODO: Investigate why this isn't instantly available? Is it because it takes time to generate keys? Or is the pod just not ready?
   # Also, *** WEIRD *** we have to send a get request to this URL before we can GET the keys: "<id>/keys/targets/pairs"
   # otherwise a 404 is returned
   i=0
-  while ! http --ignore-stdin --check-status --verify="no" GET "${keyserver}/api/v1/root/${id}" "${KUBE_AUTH}"
+  while ! http --ignore-stdin --check-status --verify="no" GET "${keyserver}/api/v1/root/${id}"
   do
     echo "Waiting for keys"
     i=$((i+1))
@@ -62,7 +71,7 @@ setup_credentials() {
     fi
     sleep 2
   done
-  keys=$(http --ignore-stdin --check-status --verify="no" GET "${keyserver}/api/v1/root/${id}/keys/targets/pairs" "${KUBE_AUTH}")
+  keys=$(http --ignore-stdin --check-status --verify="no" GET "${keyserver}/api/v1/root/${id}/keys/targets/pairs")
   echo "Ok, got keys:"
   echo $keys
   cat > user-keys.json << EOF
